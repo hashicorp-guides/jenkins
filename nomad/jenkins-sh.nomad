@@ -5,6 +5,11 @@ job "jenkins-beta" {
       stagger      = "30s"
         max_parallel = 1
     }
+  constraint {
+    attribute = "${driver.java.version}"
+    operator  = ">"
+    value     = "1.7.0"
+  }
   group "web" {
     count = 1
       ephemeral_disk {
