@@ -98,7 +98,7 @@ This should be imported into Vault using the following command (as an authentica
 ```bash
 $ vault write /auth/token/roles/nomad-cluster @nomad-cluster-role.json
 ```
-Where *nomad-cluster-role* is the file contain the json encoded description of the role.
+Where *nomad-cluster-role.json* is the file contain the json encoded description of the role.
 
 Validate that your role was created succesfully using (as an authenticated call):
 
@@ -235,3 +235,107 @@ Then create Slave Templates based on the type of jobs you run. For Java related 
 
 In order to consume credentials securely, using the same Workflow as a production application would, the use of the AppRole secure introduction method is recommended. A simplified diagram of the steps carried out is included below:
 ![Approle Diagram](https://github.com/hashicorp-guides/jenkins/raw/master/img/approle.jpg)
+
+To start, we need to generate a policy around the secrets that Jenkins jobs would be able to consume. Assuming the secret would be stored in Vault in *secret/hello*, as an authenticated user, create the policy:
+```bash
+$ vault policy-create java-example java-example.hcl
+```
+The contents of *java-example.hcl* are available in the Vault directory and included here as reference:
+```hcl
+path "secret/hello" {
+  capabilities = ["read", "list"]
+}
+```
+Validate the policy was properly imported issuing the following command as an authenticated user:
+```bash
+$ vault policies java-example
+```
+
+We then need to create a role for Jenkins to generate Tokens associated with that policy. An example is available on the *vault* directory and copied below for reference:
+```json
+{
+  "allowed_policies": "java-example,default",
+  "explicit_max_ttl": 0,
+  "name": "jenkins",
+  "orphan": false,
+  "period": 259200,
+  "renewable": true
+}
+```
+
+This should be imported into Vault using the following command (as an authenticated call):
+```bash
+$ vault write /auth/token/roles/jenkins @jenkins-role.json
+```
+Where *jenkins-role.json* is the file contain the json encoded description of the role.
+
+Validate the role was properly imported using the following command:
+```bash
+$ vault read auth/approle/role/jenkins
+Key                 Value
+---                 -----
+bind_secret_id      true
+bound_cidr_list
+period              0
+policies            [default java-example]
+secret_id_num_uses  0
+secret_id_ttl       3600
+token_max_ttl       0
+token_num_uses      0
+token_ttl           3600
+```
+
+Obtain the Role ID from the newly created role:
+```bash
+$ vault read auth/approle/role/jenkins/role-id
+Key     Value
+---     -----
+role_id 67bbcf2a-f7fb-3b41-f57e-99a34d9253e7
+```
+
+Create a policy for Jenkins to create Secret IDs in order for the Job to login and obtain a Vault Token:
+```hcl
+path "auth/approle/role/jenkins/secret-id" {
+  capabilities = ["read","create","update"]
+}
+
+path "secret/github" {
+  capabilities = ["read"]
+}
+```
+
+Finally, generate a token for Jenkins:
+```bash
+Key             Value
+---             -----
+token           a8f47741-7eb3-0d6c-809b-b95b456dc80a
+token_accessor  bce5a62b-cdd3-72cb-d74b-91d82cfa062c
+token_duration  768h0m0s
+token_renewable true
+token_policies  [default jenkins]
+```
+
+This token can be safely stored in the Vault credential store so it can be used by jobs. The role id can also be stored either in Jenkins, or in Version control, along with the project in order to provide further separation.
+- Jenkins only knows it’s Vault Token (and potentially the Role ID) but doesn’t know the Secret ID, which is generated at pipeline runtime and it’s for one time use only.
+
+- The Role ID can be stored in the Jenkinsfile. Without a token and a Secret ID has no use.
+
+- The Secret ID is dynamic and one time use only, and only lives for a short period of time while it’s requested and a login process is carried out to obtain a token for the role.
+
+- The role token is short lived, and it will be useless once the pipeline finishes. It can even be revoked once you’re finished with your pipeline.
+
+An example Groovy script is provided below as reference, assuming the Role ID was stored in Jenkins as *role* and the Vault Token was stored as *VAULTTOKEN*:
+
+```groovy
+      sh 'curl -o vault.zip https://releases.hashicorp.com/vault/0.7.0/vault_0.7.0_linux_arm.zip ; yes | unzip vault.zip'
+      withCredentials([string(credentialsId: 'role', variable: 'ROLE_ID'),string(credentialsId: 'VAULTTOKEN', variable: 'VAULT_TOKEN')]) {
+        sh '''
+          set +x
+          export VAULT_ADDR=https://$(hostname):8200
+          export SECRET_ID=$(./vault write -field=secret_id -f auth/approle/role/java-example/secret-id)
+          export VAULT_TOKEN=$(./vault write -field=token auth/approle/login role_id=${ROLE_ID} secret_id=${SECRET_ID})
+        '''
+     }
+```
+
+

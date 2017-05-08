@@ -1,0 +1,8 @@
+{
+  "allowed_policies": "java-example,default",
+  "explicit_max_ttl": 0,
+  "name": "jenkins",
+  "orphan": false,
+  "period": 259200,
+  "renewable": true
+}
