@@ -200,6 +200,9 @@ Two Nomad job examples are provided in the Nomad folder:
 
 Both jobs register a Jenkins service in Consul, which later can be used to access the jenkins page in http://jenkins.service.consul:8080 by querying the DNS name through the Consul interface.
 
+### Limitations
+* At this time there is no process to perform an automatic backup / restore.
+
 ## Running Jenkins Agents (Build jobs) in Nomad
 A Jenkins plugin exists (albeit somewhat limited) to schedule build jobs in Nomad. To install the plugin, once logged into Jenkins, go to *Manage Jenkins* / *Plugin Manager* / *Available*  and select *Nomad Plugin*, then click on *Download now and Install after restart* and click on *Restart Jenkins when installation is complete and no jobs are running*. Jenkins will install the Plugin and restart.
 
@@ -215,8 +218,20 @@ Click the *Test Connection* button to ensure everything has been set properly.
 > Warning: Be careful about trailing slashes.
 > It's been proven to generate issues.
 
-Then create Slave Templates based on the type of jobs you run. For Java related jobs, a container is not required, although for other platforms you may want to create containers and upload them to the Docker Hub. The *Labels* field will be used to filter what kind of Build job you will use for each agent.
+Then create Slave Templates based on the type of jobs you run. For Java related jobs, a container is not required, although for other platforms you may want to create containers and upload them to the Docker Hub. The *Labels* field will be used to filter what kind of Build job you will use for each agent. A full example is included below:
 
+![Slave Template](https://github.com/hashicorp-guides/jenkins/raw/master/img/slave-template.png)
 
+### Limitations
+* At this time the slave template doesn't support a Vault stanza to automatically provision a VAULT_TOKEN to the build job. @ncorrare is in the process of authoring a PR.
+* There is a PR sent to support job constraints that hasn't been merged yet. Details available on: https://github.com/jenkinsci/nomad-plugin/pull/17/files.
 
+## Requesting credentials from Vault as part of a Jenkins Job.
+> Note: There is a plugin available to consume credentials from Vault.
+> The workflow used is not particularly recommended, as you need to either
+> need to provide a Root Token or both a Role ID and a Secret ID in AppRole.
+> The plugin is currently under heavy development so this may change in the 
+> future.
 
+In order to consume credentials securely, using the same Workflow as a production application would, the use of the AppRole secure introduction method is recommended. A simplified diagram of the steps carried out is included below:
+![Approle Diagram](https://github.com/hashicorp-guides/jenkins/raw/master/img/approle.jpg)
