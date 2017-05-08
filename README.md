@@ -53,9 +53,138 @@ The Oracle JVM is recommended for performance reasons, although OpenJDK/Icedtea 
 
 - A running and unsealed Vault cluster.
 - A running Consul cluster, using dnsmasq to forward DNS queries. 
+
+
 All of these can be deployed using the hashistack module available in https://github.com/hashicorp-modules/hashi-stack-aws
 
 ### Nomad integration with Consul and Vault
 Scheduled tasks will benefit from both the Consul and Vault integrations in Nomad. This is not a requirement (except for certain sections of the guide), but it will benefit the user experience, as some sections of the guide will assume Consul URLs.
 
+As an example of the Vault / Consul stanzas is available below:
 
+```hcl
+consul {
+  address = "127.0.0.1:8500"
+  auto_advertise = true
+
+  server_auto_join = false
+  client_auto_join = false
+}
+
+vault {
+  enabled          = true
+  address          = "https://vault.service.consul:8200"
+  create_from_role = "nomad-cluster"
+  token            = "1b6a5b29-e343-5031-76a1-cc71ed1a298d"
+}
+```
+
+The **nomad-cluster** role is available on the *vault* directory. It allows creation of tokens from a number of pre-defined policies. This role, needs to be created in advanced in Vault, as well as a policy to allow Vault to create tokens, and a Token for each Nomad server.
+
+An example of the nomad-cluster Vault role is available below:
+```json
+{
+  "allowed_policies": "jenkins,default,github",
+  "disallowed_policies": "nomad-server",
+  "explicit_max_ttl": 0,
+  "name": "nomad-cluster",
+  "orphan": false,
+  "period": 259200,
+  "renewable": true
+}
+``` 
+
+This should be imported into Vault using the following command (as an authenticated call):
+```bash
+$ vault write /auth/token/roles/nomad-cluster @nomad-cluster-role.json
+```
+Where *nomad-cluster-role* is the file contain the json encoded description of the role.
+
+Validate that your role was created succesfully using (as an authenticated call):
+
+```bash
+$ vault read auth/token/roles/nomad-cluster
+Key                 Value
+---                 -----
+allowed_policies    [default github jenkins]
+disallowed_policies [nomad-server]
+explicit_max_ttl    0
+name                nomad-cluster
+orphan              false
+path_suffix
+period              259200
+renewable           true
+```
+
+A policy should be created to allow Nomad to generate tokens for scheduled tasks. An example of the policy (as described on the Nomad documention) is included in the *vault* directory and copied below:
+```hcl
+
+# Allow creating tokens under "nomad-cluster" role. The role name should be
+# updated if "nomad-cluster" is not used.
+path "auth/token/create/nomad-cluster" {
+  capabilities = ["update"]
+}
+
+# Allow looking up "nomad-cluster" role. The role name should be updated if
+# "nomad-cluster" is not used.
+path "auth/token/roles/nomad-cluster" {
+  capabilities = ["read"]
+}
+
+# Allow looking up the token passed to Nomad to validate # the token has the
+# proper capabilities. This is provided by the "default" policy.
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+
+# Allow looking up incoming tokens to validate they have permissions to access
+# the tokens they are requesting. This is only required if
+# `allow_unauthenticated` is set to false.
+path "auth/token/lookup" {
+  capabilities = ["update"]
+}
+
+# Allow revoking tokens that should no longer exist. This allows revoking
+# tokens for dead tasks.
+path "auth/token/revoke-accessor" {
+  capabilities = ["update"]
+}
+
+# Allow checking the capabilities of our own token. This is used to validate the
+# token upon startup.
+path "sys/capabilities-self" {
+  capabilities = ["update"]
+}
+
+# Allow our own token to be renewed.
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+```
+
+Import this policy into vault using (as an authenticated call):
+```bash
+$ vault policy-write nomad-server nomad-server-policy.hcl
+```
+where *nomad-server-policy.hcl* is the file containing the aforementioned policy.
+
+Validate the policy was properly imported with (as an authenticated call):
+```bash
+$ vault policies nomad-server
+```
+and verify the full output.
+
+Finally, you need to generate Vault tokens for your Nomad agents, using:
+```bash
+$ vault token-create -policy nomad-server -period 72h
+Key             Value
+---             -----
+token           f74ae7f3-cc4f-c906-142a-b2e778ff6185
+token_accessor  841721c6-f0a8-41e8-7c4f-97d7d6b31a41
+token_duration  72h0m0s
+token_renewable true
+token_policies  [default nomad-server]
+```
+
+## Running a Jenkins Master on Nomad
+Being a Java application, 
