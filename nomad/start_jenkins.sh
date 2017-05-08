@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VAULT_ADDR=https://vault.service.lhr.consul:8200
+VAULT_ADDR=https://vault.service.consul:8200
 echo "Assuming Vault binary doesn't exist, download it"
 curl --retry 3 -o vault.zip https://releases.hashicorp.com/vault/0.7.0/vault_0.7.0_linux_arm.zip && yes | unzip vault.zip
 echo "Get GitHub PAN from Vault"

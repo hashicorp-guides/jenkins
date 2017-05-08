@@ -187,4 +187,18 @@ token_policies  [default nomad-server]
 ```
 
 ## Running a Jenkins Master on Nomad
-Being a Java application, 
+Being a Java application, Nomad can run Jenkins with the Java driver without the need for any further abstraction (i.e. Docker, RKT, Qemu or LXC) with a reasonable amount of isolation (cgroups, namespaces, and chroot) augmenting the JVM. It's worth noting that Jenkins is a stateful process that store a number of configuration files.
+
+The use of ephemeral disk is required to provide a level of persistance, but it's not a highly available storage. If a node became unavailable before it was drained, the task would be started with a fresh directory. A couple of options to consider would be:
+
+- Have regular backups of your Jenkins datastore (potentially using the thinBackup plugin or the SCM Sync Configuration plugin). These would be supported in principle by Jenkins but require manual intervention.
+- Maintain your datastore in version control, and clone the repository automatically with Git.
+
+Two Nomad job examples are provided in the Nomad folder:
+- jenkins-java.nomad: Starts the process normally using a Java driver, you'll need to find the initial administrator password in the stderr log inside the allocation and use it to set up Jenkins.
+- jenkins-sh.nomad: Clones a repository from Github inside the allocation before starting Jenkins, in order to provide a restore. The process consumes the GitHub personal access token stored in Vault, in *secret/github* as the *pan* key. This secret should be manually loaded in GitHub previous to scheduling the job.
+
+Both jobs register a Jenkins service in Consul, which later can be used to access the jenkins page in http://jenkins.service.consul:8080 by querying the DNS name through the Consul interface.
+
+
+
