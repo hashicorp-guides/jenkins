@@ -200,5 +200,23 @@ Two Nomad job examples are provided in the Nomad folder:
 
 Both jobs register a Jenkins service in Consul, which later can be used to access the jenkins page in http://jenkins.service.consul:8080 by querying the DNS name through the Consul interface.
 
+## Running Jenkins Agents (Build jobs) in Nomad
+A Jenkins plugin exists (albeit somewhat limited) to schedule build jobs in Nomad. To install the plugin, once logged into Jenkins, go to *Manage Jenkins* / *Plugin Manager* / *Available*  and select *Nomad Plugin*, then click on *Download now and Install after restart* and click on *Restart Jenkins when installation is complete and no jobs are running*. Jenkins will install the Plugin and restart.
+
+Upon Jenkins restart, go back to *Manage Jenkins* / *Configure System*  and in the Nomad section, configure as follows:
+
+- Name: <A string to identify the configuration>
+- Nomad URL: http://nomad.service.consul:4646
+- Jenkins Base URL: http://jenkins.service.consul:8080
+- Jenkins Slave URL: http://jenkins.service.consul:8080/jnlpJars/slave.jar
+
+Click the *Test Connection* button to ensure everything has been set properly.
+
+> Warning: Be careful about trailing slashes.
+> It's been proven to generate issues.
+
+Then create Slave Templates based on the type of jobs you run. For Java related jobs, a container is not required, although for other platforms you may want to create containers and upload them to the Docker Hub. The *Labels* field will be used to filter what kind of Build job you will use for each agent.
+
+
 
 
