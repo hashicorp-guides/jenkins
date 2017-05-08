@@ -338,4 +338,23 @@ An example Groovy script is provided below as reference, assuming the Role ID wa
      }
 ```
 
+## Importing a full example project
+
+The example project requires a secret to exist in secret/hello.
+
+```bash
+$ vault write secret/hello value="Hello World"
+```
+There is an example project available in https://github.com/hashicorp-guides/vault-java-example. In order to import the example, the use of Jenkins' Blue Ocean UI is recommended. To install Blue Ocean, once logged into Jenkins, go to *Manage Jenkins* / *Plugin Manager* / *Available*  and select *Blue Ocean*, then click on *Download now and Install after restart* and click on *Restart Jenkins when installation is complete and no jobs are running*. Jenkins will install the Plugin and restart.
+
+Once restarted, log back into Jenkins and click the *Open Blue Ocean* button. Click on *New Pipeline*. Select *Github*, and choose the right organization.
+
+
+![Select Repository](https://github.com/hashicorp-guides/jenkins/raw/master/img/repository.png)
+
+Select *New Pipeline* and Choose the repository with the *vault-java-example*.
+
+![Select Project](https://github.com/hashicorp-guides/jenkins/raw/master/img/project.png)
+
+The Jenkinsfile will be imported and the vault-java-example job will start running. Refer to the Jenkinsfile to review the process carried out by Jenkins and how the secret was consumed from Vault.
 
