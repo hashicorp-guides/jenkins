@@ -20,17 +20,17 @@ Jenkins also schedules a number of short running batch jobs for testing. There i
 As service discovery, to monitor and use the DNS interface to consume services.
 
 ### Requirements
-- A Nomad cluster running, with a client supporting scheduling Java tasks. Use the *nomad node-status* command to verify capabilities on a particular Nomad node.
+- A Nomad cluster running, with a client supporting scheduling Java tasks. Use the **nomad node-status** command to verify capabilities on a particular Nomad node.
 
 ```
-$ *nomad node-status a6ae8df0*
+$ nomad node-status a6ae8df0
 ID      = a6ae8df0
 Name    = node-3.nomad.example.net
 Class   = <none>
 DC      = dc1
 Drain   = false
 Status  = ready
-Drivers = docker,exec,*java*,raw_exec
+Drivers = docker,exec,java,raw_exec
 Uptime  = 475h11m48s
 
 Allocated Resources
@@ -49,3 +49,13 @@ Allocations
 ID        Eval ID   Job ID   Task Group  Desired Status  Client Status
 fcf788f6  49c820b4  jenkins  web         run             running
 ```
+The Oracle JVM is recommended for performance reasons, although OpenJDK/Icedtea will work fine.
+
+- A running and unsealed Vault cluster.
+- A running Consul cluster, using dnsmasq to forward DNS queries. 
+All of these can be deployed using the hashistack module available in https://github.com/hashicorp-modules/hashi-stack-aws
+
+### Nomad integration with Consul and Vault
+Scheduled tasks will benefit from both the Consul and Vault integrations in Nomad. This is not a requirement (except for certain sections of the guide), but it will benefit the user experience, as some sections of the guide will assume Consul URLs.
+
+
