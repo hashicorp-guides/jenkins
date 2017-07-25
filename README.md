@@ -12,7 +12,7 @@ Building and testing software projects requires access to secrets. Jenkins has t
 By using Vault, an homogeneous workflow can be used to consume credentials in testing and production systems. Credentials are dynamic in nature, short lived, and can be revoked easily. Access to credentials is programmatical, and as such reduces the difference between the way credentials are consumed in different environments. Policy is handled centrally in Vault.
 
 #### With Nomad
-Being a Java Application, is an excellent candidate to be scheduled in Vault as a long running service, without the need of building and maintaining containers.
+Being a Java Application, is an excellent candidate to be scheduled in Nomad as a long running service, without the need of building and maintaining containers.
 
 Jenkins also schedules a number of short running batch jobs for testing. There is a plugin available to schedule jobs in Nomad to run tests.
 
